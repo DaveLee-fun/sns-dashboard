@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📊 SNS 종합 보고서 - 잔재미코딩</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;600;700;900&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Noto Sans KR',sans-serif; background:#0a0a1a; color:#fff; min-height:100vh; }
+  .container { max-width:1200px; margin:0 auto; padding:24px; }
+  
+  /* Header */
+  .header { text-align:center; padding:40px 0 30px; }
+  .header h1 { font-size:36px; font-weight:900; background:linear-gradient(135deg,#FF4500,#FF6B35,#FFD700); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .header p { color:#888; font-size:16px; margin-top:8px; }
+  .period-badge { display:inline-block; background:rgba(255,69,0,0.15); color:#FF6B35; padding:6px 16px; border-radius:20px; font-size:14px; margin-top:12px; border:1px solid rgba(255,69,0,0.3); }
+
+  /* KPI Cards */
+  .kpi-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:16px; margin:30px 0; }
+  .kpi-card { background:rgba(255,255,255,0.04); backdrop-filter:blur(10px); border-radius:16px; padding:24px; text-align:center; border:1px solid rgba(255,255,255,0.06); transition:transform 0.3s,box-shadow 0.3s; position:relative; overflow:hidden; }
+  .kpi-card:hover { transform:translateY(-4px); box-shadow:0 12px 40px rgba(0,0,0,0.4); }
+  .kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+  .kpi-card:nth-child(1)::before { background:linear-gradient(90deg,#FF4500,#FF6B35); }
+  .kpi-card:nth-child(2)::before { background:linear-gradient(90deg,#00d4aa,#00f5cc); }
+  .kpi-card:nth-child(3)::before { background:linear-gradient(90deg,#4FC3F7,#29B6F6); }
+  .kpi-card:nth-child(4)::before { background:linear-gradient(90deg,#FFD700,#FFC107); }
+  .kpi-card:nth-child(5)::before { background:linear-gradient(90deg,#E040FB,#CE93D8); }
+  .kpi-icon { font-size:32px; margin-bottom:8px; }
+  .kpi-value { font-size:36px; font-weight:900; margin:4px 0; }
+  .kpi-label { font-size:13px; color:#888; }
+  .kpi-change { font-size:14px; margin-top:6px; font-weight:600; }
+  .kpi-change.up { color:#00d4aa; }
+  .kpi-change.down { color:#FF4500; }
+
+  /* Chart Section */
+  .charts-grid { display:grid; grid-template-columns:2fr 1fr; gap:20px; margin:20px 0; }
+  .chart-card { background:rgba(255,255,255,0.04); backdrop-filter:blur(10px); border-radius:16px; padding:24px; border:1px solid rgba(255,255,255,0.06); }
+  .chart-title { font-size:18px; font-weight:700; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+
+  /* Channel Cards */
+  .channel-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:20px 0; }
+  .channel-card { background:rgba(255,255,255,0.04); backdrop-filter:blur(10px); border-radius:16px; padding:24px; border:1px solid rgba(255,255,255,0.06); }
+  .channel-header { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+  .channel-logo { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; }
+  .channel-name { font-size:16px; font-weight:700; }
+  .channel-stat { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+  .channel-stat:last-child { border:none; }
+  .stat-label { color:#888; font-size:14px; }
+  .stat-value { font-weight:700; font-size:14px; }
+
+  /* Top Posts */
+  .top-posts { margin:20px 0; }
+  .post-row { display:grid; grid-template-columns:40px 80px 1fr 100px 80px 80px; gap:12px; padding:14px 16px; background:rgba(255,255,255,0.02); border-radius:12px; margin:8px 0; align-items:center; transition:background 0.2s; }
+  .post-row:hover { background:rgba(255,255,255,0.06); }
+  .post-rank { font-size:20px; font-weight:900; color:#FFD700; text-align:center; }
+  .post-channel { font-size:12px; padding:4px 10px; border-radius:8px; text-align:center; font-weight:600; }
+  .post-channel.insta { background:rgba(225,48,108,0.2); color:#E1306C; }
+  .post-channel.thread { background:rgba(0,0,0,0.3); color:#fff; }
+  .post-channel.youtube { background:rgba(255,0,0,0.15); color:#FF0000; }
+  .post-title { font-size:14px; }
+  .post-views { font-weight:700; color:#4FC3F7; }
+  .post-likes { color:#FF4500; }
+  .post-comments { color:#00d4aa; }
+
+  /* Footer */
+  .footer { text-align:center; padding:30px 0; color:#555; font-size:13px; }
+
+  /* Responsive */
+  @media(max-width:768px) {
+    .kpi-grid { grid-template-columns:repeat(2,1fr); }
+    .charts-grid { grid-template-columns:1fr; }
+    .channel-grid { grid-template-columns:1fr; }
+    .post-row { grid-template-columns:30px 60px 1fr 80px; }
+    .post-likes,.post-comments { display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <h1>📊 SNS 종합 보고서</h1>
+    <p>잔재미코딩 마케팅 성과 대시보드</p>
+    <div class="period-badge">📅 2026년 3월 1일 ~ 3월 23일</div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-icon">👥</div>
+      <div class="kpi-value" style="color:#FF6B35">24,650</div>
+      <div class="kpi-label">총 팔로워</div>
+      <div class="kpi-change up">▲ +2,640 (+12%)</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">👀</div>
+      <div class="kpi-value" style="color:#00d4aa">850K</div>
+      <div class="kpi-label">총 조회수</div>
+      <div class="kpi-change up">▲ +170K (+25%)</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">❤️</div>
+      <div class="kpi-value" style="color:#4FC3F7">55,600</div>
+      <div class="kpi-label">총 좋아요</div>
+      <div class="kpi-change up">▲ +8,460 (+18%)</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">💬</div>
+      <div class="kpi-value" style="color:#FFD700">7,730</div>
+      <div class="kpi-label">총 댓글</div>
+      <div class="kpi-change up">▲ +1,396 (+22%)</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">🔖</div>
+      <div class="kpi-value" style="color:#E040FB">12,050</div>
+      <div class="kpi-label">저장/공유</div>
+      <div class="kpi-change up">▲ +2,780 (+30%)</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">📈 일별 조회수 추이</div>
+      <canvas id="lineChart" height="100"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">🍩 채널별 비중</div>
+      <canvas id="doughnutChart"></canvas>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">📊 채널별 성과 비교</div>
+      <canvas id="barChart" height="100"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">🎯 목표 달성률</div>
+      <canvas id="goalChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Channel Detail -->
+  <div class="channel-grid">
+    <div class="channel-card">
+      <div class="channel-header">
+        <div class="channel-logo" style="background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)">📸</div>
+        <div class="channel-name">Instagram</div>
+      </div>
+      <div class="channel-stat"><span class="stat-label">팔로워</span><span class="stat-value">12,450</span></div>
+      <div class="channel-stat"><span class="stat-label">조회수</span><span class="stat-value">285,000</span></div>
+      <div class="channel-stat"><span class="stat-label">좋아요</span><span class="stat-value">18,500</span></div>
+      <div class="channel-stat"><span class="stat-label">참여율</span><span class="stat-value" style="color:#00d4aa">6.8%</span></div>
+    </div>
+    <div class="channel-card">
+      <div class="channel-header">
+        <div class="channel-logo" style="background:#000;border:1px solid #333">🧵</div>
+        <div class="channel-name">Threads</div>
+      </div>
+      <div class="channel-stat"><span class="stat-label">팔로워</span><span class="stat-value">3,280</span></div>
+      <div class="channel-stat"><span class="stat-label">조회수</span><span class="stat-value">45,200</span></div>
+      <div class="channel-stat"><span class="stat-label">좋아요</span><span class="stat-value">5,100</span></div>
+      <div class="channel-stat"><span class="stat-label">참여율</span><span class="stat-value" style="color:#00d4aa">11.3%</span></div>
+    </div>
+    <div class="channel-card">
+      <div class="channel-header">
+        <div class="channel-logo" style="background:#FF0000">▶️</div>
+        <div class="channel-name">YouTube</div>
+      </div>
+      <div class="channel-stat"><span class="stat-label">구독자</span><span class="stat-value">8,920</span></div>
+      <div class="channel-stat"><span class="stat-label">조회수</span><span class="stat-value">520,000</span></div>
+      <div class="channel-stat"><span class="stat-label">좋아요</span><span class="stat-value">32,000</span></div>
+      <div class="channel-stat"><span class="stat-label">참여율</span><span class="stat-value" style="color:#00d4aa">7.0%</span></div>
+    </div>
+  </div>
+
+  <!-- Top Posts -->
+  <div class="top-posts">
+    <div class="chart-card">
+      <div class="chart-title">🏆 TOP 게시물</div>
+      <div class="post-row"><div class="post-rank">1</div><div class="post-channel youtube">YouTube</div><div class="post-title">AI 비서 만들기 풀영상</div><div class="post-views">120,000</div><div class="post-likes">❤️ 8,500</div><div class="post-comments">💬 1,200</div></div>
+      <div class="post-row"><div class="post-rank">2</div><div class="post-channel insta">Instagram</div><div class="post-title">카드뉴스: 월 2만원 AI 직원</div><div class="post-views">85,000</div><div class="post-likes">❤️ 5,200</div><div class="post-comments">💬 680</div></div>
+      <div class="post-row"><div class="post-rank">3</div><div class="post-channel youtube">YouTube</div><div class="post-title">OpenClaw 5분 설치 가이드</div><div class="post-views">72,000</div><div class="post-likes">❤️ 4,800</div><div class="post-comments">💬 890</div></div>
+      <div class="post-row"><div class="post-rank">4</div><div class="post-channel thread">Threads</div><div class="post-title">AI 안 쓰면 뒤처지는 이유</div><div class="post-views">28,000</div><div class="post-likes">❤️ 3,100</div><div class="post-comments">💬 420</div></div>
+      <div class="post-row"><div class="post-rank">5</div><div class="post-channel insta">Instagram</div><div class="post-title">1인 사업 자동화 후기</div><div class="post-views">22,000</div><div class="post-likes">❤️ 2,800</div><div class="post-comments">💬 350</div></div>
+    </div>
+  </div>
+
+  <div class="footer">잔재미코딩 · OpenClaw 자동 생성 보고서 · 2026.03.23</div>
+</div>
+
+<script>
+const colors = { orange:'#FF4500', mint:'#00d4aa', blue:'#4FC3F7', gold:'#FFD700', purple:'#E040FB' };
+
+// Line Chart
+new Chart(document.getElementById('lineChart'), {
+  type:'line',
+  data:{
+    labels:['3/17','3/18','3/19','3/20','3/21','3/22','3/23'],
+    datasets:[
+      { label:'Instagram', data:[8500,12300,15800,18200,22500,28000,35200], borderColor:'#E1306C', backgroundColor:'rgba(225,48,108,0.1)', tension:0.4, fill:true },
+      { label:'Threads', data:[1200,2100,3400,4800,5200,6100,7800], borderColor:'#fff', backgroundColor:'rgba(255,255,255,0.05)', tension:0.4, fill:true },
+      { label:'YouTube', data:[18000,22500,28000,35000,42000,48000,55000], borderColor:'#FF0000', backgroundColor:'rgba(255,0,0,0.1)', tension:0.4, fill:true }
+    ]
+  },
+  options:{ responsive:true, plugins:{ legend:{ labels:{ color:'#aaa' }}}, scales:{ x:{ ticks:{ color:'#666' }, grid:{ color:'rgba(255,255,255,0.03)' }}, y:{ ticks:{ color:'#666' }, grid:{ color:'rgba(255,255,255,0.03)' }}}}
+});
+
+// Doughnut Chart
+new Chart(document.getElementById('doughnutChart'), {
+  type:'doughnut',
+  data:{
+    labels:['Instagram','Threads','YouTube'],
+    datasets:[{ data:[285000,45200,520000], backgroundColor:['#E1306C','#888','#FF0000'], borderWidth:0 }]
+  },
+  options:{ responsive:true, plugins:{ legend:{ position:'bottom', labels:{ color:'#aaa', padding:16 }}}, cutout:'65%' }
+});
+
+// Bar Chart
+new Chart(document.getElementById('barChart'), {
+  type:'bar',
+  data:{
+    labels:['팔로워','조회수(K)','좋아요','댓글','저장/공유'],
+    datasets:[
+      { label:'Instagram', data:[12450,285,18500,2340,4200], backgroundColor:'rgba(225,48,108,0.7)' },
+      { label:'Threads', data:[3280,45,5100,890,1050], backgroundColor:'rgba(255,255,255,0.3)' },
+      { label:'YouTube', data:[8920,520,32000,4500,6800], backgroundColor:'rgba(255,0,0,0.6)' }
+    ]
+  },
+  options:{ responsive:true, plugins:{ legend:{ labels:{ color:'#aaa' }}}, scales:{ x:{ ticks:{ color:'#666' }, grid:{ color:'rgba(255,255,255,0.03)' }}, y:{ ticks:{ color:'#666' }, grid:{ color:'rgba(255,255,255,0.03)' }}}}
+});
+
+// Goal Chart (Radar)
+new Chart(document.getElementById('goalChart'), {
+  type:'radar',
+  data:{
+    labels:['팔로워','조회수','좋아요','댓글','저장'],
+    datasets:[
+      { label:'달성률 %', data:[82,85,93,97,121], backgroundColor:'rgba(255,69,0,0.2)', borderColor:'#FF4500', pointBackgroundColor:'#FF4500' },
+      { label:'목표', data:[100,100,100,100,100], backgroundColor:'rgba(255,255,255,0.03)', borderColor:'rgba(255,255,255,0.2)', borderDash:[5,5], pointRadius:0 }
+    ]
+  },
+  options:{ responsive:true, plugins:{ legend:{ labels:{ color:'#aaa' }}}, scales:{ r:{ ticks:{ color:'#666', backdropColor:'transparent' }, grid:{ color:'rgba(255,255,255,0.08)' }, pointLabels:{ color:'#aaa' }}}}
+});
+</script>
+</body>
+</html>
