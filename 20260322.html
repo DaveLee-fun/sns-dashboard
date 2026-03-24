@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>📊 SNS 일일 보고서 - 잔재미코딩</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;600;700;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Noto Sans KR',sans-serif;background:#0a0a1a;color:#fff;min-height:100vh;-webkit-font-smoothing:antialiased}
+  .container{max-width:960px;margin:0 auto;padding:16px}
+
+  /* Header */
+  .header{text-align:center;padding:28px 0 16px}
+  .header h1{font-size:clamp(22px,5vw,32px);font-weight:900;background:linear-gradient(135deg,#FF4500,#FF6B35,#FFD700);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .header p{color:#888;font-size:clamp(12px,3vw,14px);margin-top:4px}
+  .date-nav{display:flex;justify-content:center;align-items:center;gap:12px;margin:12px 0 20px}
+  .date-badge{background:rgba(255,69,0,0.12);color:#FF6B35;padding:8px 18px;border-radius:20px;font-size:clamp(13px,3.5vw,16px);font-weight:700;border:1px solid rgba(255,69,0,0.25)}
+  .date-arrow{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px}
+
+  /* Section Title */
+  .section-title{font-size:clamp(15px,4vw,18px);font-weight:700;margin:24px 0 12px;display:flex;align-items:center;gap:8px}
+
+  /* KPI Scroll */
+  .kpi-scroll{display:flex;gap:12px;overflow-x:auto;padding:4px 0 12px;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory}
+  .kpi-scroll::-webkit-scrollbar{height:4px}
+  .kpi-scroll::-webkit-scrollbar-track{background:transparent}
+  .kpi-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px}
+  .kpi-card{min-width:160px;flex:0 0 auto;background:rgba(255,255,255,0.04);backdrop-filter:blur(10px);border-radius:14px;padding:16px;text-align:center;border:1px solid rgba(255,255,255,0.06);position:relative;overflow:hidden;scroll-snap-align:start}
+  .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+  .kpi-card:nth-child(1)::before{background:linear-gradient(90deg,#FF4500,#FF6B35)}
+  .kpi-card:nth-child(2)::before{background:linear-gradient(90deg,#00d4aa,#00f5cc)}
+  .kpi-card:nth-child(3)::before{background:linear-gradient(90deg,#4FC3F7,#29B6F6)}
+  .kpi-card:nth-child(4)::before{background:linear-gradient(90deg,#FFD700,#FFC107)}
+  .kpi-card:nth-child(5)::before{background:linear-gradient(90deg,#E040FB,#CE93D8)}
+  .kpi-icon{font-size:24px;margin-bottom:4px}
+  .kpi-value{font-size:clamp(24px,6vw,32px);font-weight:900}
+  .kpi-label{font-size:11px;color:#888;margin:2px 0 6px}
+  .cmp-row{display:flex;justify-content:space-between;font-size:10px;padding:2px 4px;border-radius:3px;background:rgba(255,255,255,0.02);margin:2px 0}
+  .cmp-label{color:#666}
+  .cmp-val.up{color:#00d4aa}.cmp-val.down{color:#FF4500}
+
+  /* Charts */
+  .chart-card{background:rgba(255,255,255,0.04);backdrop-filter:blur(10px);border-radius:14px;padding:16px;border:1px solid rgba(255,255,255,0.06);margin:12px 0}
+  .chart-title{font-size:clamp(14px,3.5vw,16px);font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:6px}
+  .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+  /* Channel */
+  .channel-scroll{display:flex;gap:12px;overflow-x:auto;padding:4px 0 12px;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory}
+  .channel-scroll::-webkit-scrollbar{height:4px}
+  .channel-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px}
+  .channel-card{min-width:260px;flex:0 0 auto;background:rgba(255,255,255,0.04);backdrop-filter:blur(10px);border-radius:14px;padding:16px;border:1px solid rgba(255,255,255,0.06);scroll-snap-align:start}
+  .ch-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .ch-logo{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+  .ch-name{font-size:14px;font-weight:700}
+  .ch-today{font-size:clamp(24px,6vw,30px);font-weight:900;margin:6px 0}
+  .ch-sub{font-size:11px;color:#888;margin-bottom:10px}
+  .ch-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px}
+  .ch-row:last-child{border:none}
+  .ch-rlabel{color:#888}.ch-rval{font-weight:600}
+
+  /* Hourly Heatmap */
+  .heatmap-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;margin-top:8px}
+  .heat-cell{aspect-ratio:1;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;color:rgba(255,255,255,0.7)}
+  .heat-label{font-size:10px;color:#666;text-align:center;margin-top:2px}
+  .heatmap-labels{display:grid;grid-template-columns:repeat(12,1fr);gap:4px}
+
+  /* Posts */
+  .post-card{display:flex;gap:12px;padding:12px;background:rgba(255,255,255,0.02);border-radius:10px;margin:8px 0;align-items:flex-start}
+  .post-rank{font-size:18px;font-weight:900;color:#FFD700;min-width:28px;text-align:center;padding-top:2px}
+  .post-body{flex:1;min-width:0}
+  .post-top{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+  .post-ch{font-size:10px;padding:2px 7px;border-radius:5px;font-weight:600}
+  .post-ch.insta{background:rgba(225,48,108,0.2);color:#E1306C}
+  .post-ch.thread{background:rgba(255,255,255,0.1);color:#ccc}
+  .post-ch.youtube{background:rgba(255,0,0,0.15);color:#FF0000}
+  .post-title{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .post-stats{display:flex;gap:12px;margin-top:6px;font-size:11px;color:#888}
+  .post-stats span{display:flex;align-items:center;gap:3px}
+  .ps-views{color:#4FC3F7;font-weight:700}
+  .ps-change{color:#00d4aa;font-size:10px}
+
+  /* Insights */
+  .insights{background:rgba(255,69,0,0.05);border:1px solid rgba(255,69,0,0.12);border-radius:14px;padding:16px;margin:16px 0}
+  .insights h3{font-size:clamp(14px,3.5vw,16px);margin-bottom:10px;color:#FF6B35}
+  .insight-item{padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.03);font-size:clamp(12px,3vw,13px);color:#ccc;line-height:1.7}
+  .insight-item:last-child{border:none}
+  .tag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;margin-right:4px}
+  .tag-hot{background:rgba(255,0,0,0.2);color:#FF4500}
+  .tag-tip{background:rgba(0,212,170,0.2);color:#00d4aa}
+  .tag-warn{background:rgba(255,215,0,0.2);color:#FFD700}
+  .tag-new{background:rgba(79,195,247,0.2);color:#4FC3F7}
+
+  /* Summary Table */
+  .summary-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+  .summary-table th{background:rgba(255,255,255,0.05);padding:8px 10px;text-align:left;font-weight:600;color:#aaa;border-bottom:1px solid rgba(255,255,255,0.08)}
+  .summary-table td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.03)}
+  .summary-table tr:hover{background:rgba(255,255,255,0.02)}
+
+  .footer{text-align:center;padding:24px 0;color:#444;font-size:11px}
+
+  /* Desktop */
+  @media(min-width:640px){
+    .kpi-scroll{display:grid;grid-template-columns:repeat(5,1fr);overflow:visible}
+    .kpi-card{min-width:auto}
+    .channel-scroll{display:grid;grid-template-columns:repeat(3,1fr);overflow:visible}
+    .channel-card{min-width:auto}
+  }
+  @media(max-width:639px){
+    .charts-grid{grid-template-columns:1fr}
+    .container{padding:12px}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>📊 SNS 일일 보고서</h1>
+    <p>잔재미코딩 마케팅 성과 대시보드</p>
+  </div>
+  <div class="date-nav">
+    <div class="date-arrow">◀</div>
+    <div class="date-badge">📅 2026.03.22 (토)</div>
+    <div class="date-arrow">▶</div>
+  </div>
+
+  <!-- KPI -->
+  <div class="section-title">📌 오늘의 핵심 지표</div>
+  <div class="kpi-scroll">
+    <div class="kpi-card"><div class="kpi-icon">👀</div><div class="kpi-value" style="color:#FF6B35">85,800</div><div class="kpi-label">오늘 조회수</div><div class="cmp-row"><span class="cmp-label">어제</span><span class="cmp-val up">▲11%</span></div><div class="cmp-row"><span class="cmp-label">전주</span><span class="cmp-val up">▲32%</span></div><div class="cmp-row"><span class="cmp-label">전월</span><span class="cmp-val up">▲138%</span></div></div>
+    <div class="kpi-card"><div class="kpi-icon">❤️</div><div class="kpi-value" style="color:#00d4aa">6,020</div><div class="kpi-label">좋아요</div><div class="cmp-row"><span class="cmp-label">어제</span><span class="cmp-val up">▲11%</span></div><div class="cmp-row"><span class="cmp-label">전주</span><span class="cmp-val up">▲44%</span></div><div class="cmp-row"><span class="cmp-label">전월</span><span class="cmp-val up">▲159%</span></div></div>
+    <div class="kpi-card"><div class="kpi-icon">💬</div><div class="kpi-value" style="color:#4FC3F7">1,100</div><div class="kpi-label">댓글</div><div class="cmp-row"><span class="cmp-label">어제</span><span class="cmp-val up">▲16%</span></div><div class="cmp-row"><span class="cmp-label">전주</span><span class="cmp-val up">▲54%</span></div><div class="cmp-row"><span class="cmp-label">전월</span><span class="cmp-val up">▲228%</span></div></div>
+    <div class="kpi-card"><div class="kpi-icon">🔖</div><div class="kpi-value" style="color:#FFD700">1,810</div><div class="kpi-label">저장/공유</div><div class="cmp-row"><span class="cmp-label">어제</span><span class="cmp-val up">▲19%</span></div><div class="cmp-row"><span class="cmp-label">전주</span><span class="cmp-val up">▲62%</span></div><div class="cmp-row"><span class="cmp-label">전월</span><span class="cmp-val up">▲231%</span></div></div>
+    <div class="kpi-card"><div class="kpi-icon">👥</div><div class="kpi-value" style="color:#E040FB">+295</div><div class="kpi-label">신규 팔로워</div><div class="cmp-row"><span class="cmp-label">어제</span><span class="cmp-val up">▲29%</span></div><div class="cmp-row"><span class="cmp-label">전주</span><span class="cmp-val up">▲123%</span></div><div class="cmp-row"><span class="cmp-label">전월</span><span class="cmp-val up">▲533%</span></div></div>
+  </div>
+
+  <!-- Charts -->
+  <div class="section-title">📈 추이 분석</div>
+  <div class="charts-grid">
+    <div class="chart-card"><div class="chart-title">최근 7일</div><canvas id="weeklyChart" height="160"></canvas></div>
+    <div class="chart-card"><div class="chart-title">주간 추이 (4주)</div><canvas id="monthlyChart" height="160"></canvas></div>
+  </div>
+  <div class="charts-grid">
+    <div class="chart-card"><div class="chart-title">🍩 채널 비중</div><canvas id="doughnutChart" height="180"></canvas></div>
+    <div class="chart-card"><div class="chart-title">🎯 목표 달성률</div><canvas id="goalChart" height="180"></canvas></div>
+  </div>
+
+  <!-- Hourly Heatmap -->
+  <div class="section-title">🕐 시간대별 활동량</div>
+  <div class="chart-card">
+    <div class="chart-title">오늘 시간대별 조회수 히트맵</div>
+    <div class="heatmap-grid" id="heatmap"></div>
+    <div class="heatmap-labels" id="heatLabels"></div>
+  </div>
+
+  <!-- Channels -->
+  <div class="section-title">📱 채널별 상세</div>
+  <div class="channel-scroll">
+    <div class="channel-card">
+      <div class="ch-header"><div class="ch-logo" style="background:linear-gradient(45deg,#f09433,#dc2743,#bc1888)">📸</div><div class="ch-name">Instagram</div></div>
+      <div class="ch-today" style="color:#E1306C">30,000</div><div class="ch-sub">오늘 조회수 · 어제 대비 <span style="color:#00d4aa">▲13%</span></div>
+      <div class="ch-row"><span class="ch-rlabel">팔로워</span><span class="ch-rval">12,450 <span style="color:#00d4aa;font-size:10px">+120</span></span></div>
+      <div class="ch-row"><span class="ch-rlabel">좋아요</span><span class="ch-rval">2,180</span></div>
+      <div class="ch-row"><span class="ch-rlabel">댓글</span><span class="ch-rval">340</span></div>
+      <div class="ch-row"><span class="ch-rlabel">저장</span><span class="ch-rval">680</span></div>
+      <div class="ch-row"><span class="ch-rlabel">도달</span><span class="ch-rval">28,400</span></div>
+      <div class="ch-row"><span class="ch-rlabel">프로필 방문</span><span class="ch-rval">1,240</span></div>
+      <div class="ch-row"><span class="ch-rlabel">참여율</span><span class="ch-rval" style="color:#00d4aa">6.8%</span></div>
+    </div>
+    <div class="channel-card">
+      <div class="ch-header"><div class="ch-logo" style="background:#000;border:1px solid #333">🧵</div><div class="ch-name">Threads</div></div>
+      <div class="ch-today" style="color:#ccc">6,600</div><div class="ch-sub">오늘 조회수 · 어제 대비 <span style="color:#00d4aa">▲14%</span></div>
+      <div class="ch-row"><span class="ch-rlabel">팔로워</span><span class="ch-rval">3,280 <span style="color:#00d4aa;font-size:10px">+85</span></span></div>
+      <div class="ch-row"><span class="ch-rlabel">좋아요</span><span class="ch-rval">960</span></div>
+      <div class="ch-row"><span class="ch-rlabel">댓글</span><span class="ch-rval">180</span></div>
+      <div class="ch-row"><span class="ch-rlabel">리포스트</span><span class="ch-rval">220</span></div>
+      <div class="ch-row"><span class="ch-rlabel">인용</span><span class="ch-rval">45</span></div>
+      <div class="ch-row"><span class="ch-rlabel">도달</span><span class="ch-rval">6,200</span></div>
+      <div class="ch-row"><span class="ch-rlabel">참여율</span><span class="ch-rval" style="color:#00d4aa">11.3%</span></div>
+    </div>
+    <div class="channel-card">
+      <div class="ch-header"><div class="ch-logo" style="background:#FF0000">▶️</div><div class="ch-name">YouTube</div></div>
+      <div class="ch-today" style="color:#FF0000">49,200</div><div class="ch-sub">오늘 조회수 · 어제 대비 <span style="color:#00d4aa">▲9%</span></div>
+      <div class="ch-row"><span class="ch-rlabel">구독자</span><span class="ch-rval">8,920 <span style="color:#00d4aa;font-size:10px">+175</span></span></div>
+      <div class="ch-row"><span class="ch-rlabel">좋아요</span><span class="ch-rval">3,700</span></div>
+      <div class="ch-row"><span class="ch-rlabel">댓글</span><span class="ch-rval">760</span></div>
+      <div class="ch-row"><span class="ch-rlabel">공유</span><span class="ch-rval">420</span></div>
+      <div class="ch-row"><span class="ch-rlabel">시청 시간</span><span class="ch-rval">2,840분</span></div>
+      <div class="ch-row"><span class="ch-rlabel">평균 시청</span><span class="ch-rval">4분 12초</span></div>
+      <div class="ch-row"><span class="ch-rlabel">CTR</span><span class="ch-rval" style="color:#00d4aa">8.4%</span></div>
+    </div>
+  </div>
+
+  <!-- Summary Table -->
+  <div class="section-title">📋 종합 비교표</div>
+  <div class="chart-card" style="overflow-x:auto">
+    <table class="summary-table">
+      <thead><tr><th>지표</th><th>오늘</th><th>어제</th><th>전주 동일</th><th>전월 동일</th></tr></thead>
+      <tbody>
+        <tr><td>총 조회수</td><td style="font-weight:700">85,800</td><td>85,800</td><td>69,500</td><td>36,100</td></tr>
+        <tr><td>총 좋아요</td><td style="font-weight:700">6,020</td><td>6,020</td><td>4,740</td><td>2,640</td></tr>
+        <tr><td>총 댓글</td><td style="font-weight:700">1,100</td><td>1,100</td><td>830</td><td>390</td></tr>
+        <tr><td>총 저장/공유</td><td style="font-weight:700">1,810</td><td>1,810</td><td>1,330</td><td>650</td></tr>
+        <tr><td>신규 팔로워</td><td style="font-weight:700;color:#E040FB">+295</td><td>+295</td><td>+170</td><td>+60</td></tr>
+        <tr><td>참여율 평균</td><td style="font-weight:700;color:#00d4aa">8.7%</td><td>7.9%</td><td>6.8%</td><td>4.2%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Top Posts -->
+  <div class="section-title">🏆 오늘의 TOP 게시물</div>
+  <div class="chart-card">
+    <div class="post-card"><div class="post-rank">1</div><div class="post-body"><div class="post-top"><span class="post-ch youtube">YouTube</span><span class="post-title">AI 비서 만들기 풀영상</span></div><div class="post-stats"><span class="ps-views">👀 32,000</span><span>❤️ 4,200</span><span>💬 480</span><span class="ps-change">어제 대비 ▲34%</span></div></div></div>
+    <div class="post-card"><div class="post-rank">2</div><div class="post-body"><div class="post-top"><span class="post-ch insta">Instagram</span><span class="post-title">카드뉴스: 월 2만원으로 AI 직원 10명</span></div><div class="post-stats"><span class="ps-views">👀 18,500</span><span>❤️ 2,800</span><span>💬 340</span><span class="ps-change">어제 대비 ▲28%</span></div></div></div>
+    <div class="post-card"><div class="post-rank">3</div><div class="post-body"><div class="post-top"><span class="post-ch youtube">YouTube</span><span class="post-title">OpenClaw 5분 설치 가이드</span></div><div class="post-stats"><span class="ps-views">👀 15,200</span><span>❤️ 1,900</span><span>💬 220</span><span class="ps-change">어제 대비 ▲14%</span></div></div></div>
+    <div class="post-card"><div class="post-rank">4</div><div class="post-body"><div class="post-top"><span class="post-ch thread">Threads</span><span class="post-title">AI 안 쓰면 뒤처지는 이유 3가지</span></div><div class="post-stats"><span class="ps-views">👀 4,800</span><span>❤️ 960</span><span>💬 180</span><span class="ps-change">어제 대비 ▲22%</span></div></div></div>
+    <div class="post-card"><div class="post-rank">5</div><div class="post-body"><div class="post-top"><span class="post-ch insta">Instagram</span><span class="post-title">1인 사업 자동화 후기 (리얼)</span></div><div class="post-stats"><span class="ps-views">👀 3,200</span><span>❤️ 680</span><span>💬 95</span><span class="ps-change">어제 대비 ▲9%</span></div></div></div>
+  </div>
+
+  <!-- Insights -->
+  <div class="insights">
+    <h3>🤖 AI 인사이트</h3>
+    <div class="insight-item"><span class="tag tag-hot">🔥 급상승</span>YouTube "AI 비서 만들기" 3일 연속 1위. 추천 알고리즘 진입 확인. 이 추세면 이번 주 누적 10만 돌파 예상.</div>
+    <div class="insight-item"><span class="tag tag-tip">💡 전략</span>인스타 카드뉴스 저장률 8.2%로 업계 평균(3%) 대비 2.7배. 카드뉴스 추가 제작 시 도달 극대화 가능.</div>
+    <div class="insight-item"><span class="tag tag-new">📊 발견</span>오후 6~8시 게시물 조회수가 평균 대비 40% 높음. 다음 게시물은 18:00 발행 추천.</div>
+    <div class="insight-item"><span class="tag tag-warn">⚠️ 주의</span>Threads 팔로워 성장률 전주 대비 둔화 (-15%). 인스타→쓰레드 크로스 포스팅 빈도 늘려야 함.</div>
+    <div class="insight-item"><span class="tag tag-tip">💡 기회</span>YouTube 평균 시청 시간 4분 12초로 전월(2분 48초) 대비 50% 증가. 10분+ 롱폼 콘텐츠 테스트 적기.</div>
+    <div class="insight-item"><span class="tag tag-hot">🔥 트렌드</span>"OpenClaw" 키워드 네이버 검색량 전주 대비 280% 증가. SEO 콘텐츠 강화 추천.</div>
+  </div>
+
+  <div class="footer">잔재미코딩 · OpenClaw 자동 생성 일일 보고서 · 2026.03.22 23:59 기준</div>
+</div>
+
+<script>
+// Weekly
+new Chart(document.getElementById('weeklyChart'),{type:'line',data:{labels:['월','화','수','목','금','토','일'],datasets:[{label:'인스타',data:[8500,12300,15800,18200,22500,28000,35200],borderColor:'#E1306C',backgroundColor:'rgba(225,48,108,0.06)',tension:.4,fill:true,pointRadius:3},{label:'쓰레드',data:[1200,2100,3400,4800,5200,6100,7800],borderColor:'#aaa',backgroundColor:'rgba(255,255,255,0.02)',tension:.4,fill:true,pointRadius:3},{label:'유튜브',data:[18000,22500,28000,35000,42000,48000,55200],borderColor:'#FF0000',backgroundColor:'rgba(255,0,0,0.06)',tension:.4,fill:true,pointRadius:3}]},options:{responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{color:'#888',font:{size:11},boxWidth:12}}},scales:{x:{ticks:{color:'#555',font:{size:11}},grid:{color:'rgba(255,255,255,0.03)'}},y:{ticks:{color:'#555',font:{size:10},callback:v=>v>=1000?(v/1000)+'K':v},grid:{color:'rgba(255,255,255,0.03)'}}}}});
+
+// Monthly
+new Chart(document.getElementById('monthlyChart'),{type:'bar',data:{labels:['1주차','2주차','3주차','4주차'],datasets:[{label:'인스타',data:[42000,68000,105000,63200],backgroundColor:'rgba(225,48,108,0.6)',borderRadius:4},{label:'쓰레드',data:[5800,12000,22700,13900],backgroundColor:'rgba(200,200,200,0.35)',borderRadius:4},{label:'유튜브',data:[85000,142000,193000,103200],backgroundColor:'rgba(255,0,0,0.5)',borderRadius:4}]},options:{responsive:true,plugins:{legend:{labels:{color:'#888',font:{size:11},boxWidth:12}}},scales:{x:{ticks:{color:'#555',font:{size:11}},grid:{color:'rgba(255,255,255,0.03)'}},y:{ticks:{color:'#555',font:{size:10},callback:v=>v>=1000?(v/1000)+'K':v},grid:{color:'rgba(255,255,255,0.03)'}}}}});
+
+// Doughnut
+new Chart(document.getElementById('doughnutChart'),{type:'doughnut',data:{labels:['Instagram','Threads','YouTube'],datasets:[{data:[35200,7800,55200],backgroundColor:['#E1306C','#888','#FF0000'],borderWidth:0,hoverOffset:6}]},options:{responsive:true,plugins:{legend:{position:'bottom',labels:{color:'#888',padding:12,font:{size:11}}}},cutout:'68%'}});
+
+// Radar
+new Chart(document.getElementById('goalChart'),{type:'radar',data:{labels:['조회수','좋아요','댓글','저장','팔로워'],datasets:[{label:'달성률',data:[85,93,97,121,82],backgroundColor:'rgba(255,69,0,0.12)',borderColor:'#FF4500',pointBackgroundColor:'#FF4500',pointRadius:3},{label:'목표',data:[100,100,100,100,100],backgroundColor:'transparent',borderColor:'rgba(255,255,255,0.12)',borderDash:[4,4],pointRadius:0}]},options:{responsive:true,plugins:{legend:{labels:{color:'#888',font:{size:11},boxWidth:12}}},scales:{r:{min:0,max:130,ticks:{color:'#555',backdropColor:'transparent',stepSize:25,font:{size:9}},grid:{color:'rgba(255,255,255,0.05)'},pointLabels:{color:'#aaa',font:{size:11}}}}}});
+
+// Heatmap
+const heatData=[120,80,45,30,25,60,280,850,1800,3200,4500,5800,6200,5400,4800,3600,4200,6800,8500,7200,5400,3200,1800,600];
+const heatmap=document.getElementById('heatmap');
+const heatLabels=document.getElementById('heatLabels');
+const maxH=Math.max(...heatData);
+heatData.forEach((v,i)=>{
+  if(i%2===0){
+    const avg=(v+heatData[i+1])/2;
+    const intensity=avg/maxH;
+    const r=Math.round(255*intensity);
+    const g=Math.round(69*intensity);
+    const cell=document.createElement('div');
+    cell.className='heat-cell';
+    cell.style.background=`rgba(${r},${g},0,${0.15+intensity*0.7})`;
+    cell.textContent=Math.round(avg/100)/10+'K';
+    heatmap.appendChild(cell);
+    const lbl=document.createElement('div');
+    lbl.className='heat-label';
+    lbl.textContent=i+'시';
+    heatLabels.appendChild(lbl);
+  }
+});
+</script>
+</body>
+</html>
